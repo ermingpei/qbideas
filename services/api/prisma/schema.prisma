@@ -1,0 +1,352 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String   @id @default(uuid())
+  username                String   @unique @db.VarChar(50)
+  email                   String   @unique @db.VarChar(255)
+  passwordHash            String   @map("password_hash") @db.VarChar(255)
+  emailVerified           Boolean  @default(false) @map("email_verified")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  profileImageUrl         String?  @map("profile_image_url")
+  bio                     String?
+  reputationScore         Int      @default(0) @map("reputation_score")
+  totalEarnings           Decimal  @default(0) @map("total_earnings") @db.Decimal(10, 2)
+  availableBalance        Decimal  @default(0) @map("available_balance") @db.Decimal(10, 2)
+  stripeAccountId         String?  @map("stripe_account_id") @db.VarChar(255)
+  stripeCustomerId        String?  @map("stripe_customer_id") @db.VarChar(255)
+  notificationPreferences Json     @default("{\"email\": true, \"inApp\": true, \"push\": false}") @map("notification_preferences")
+  
+  // User profile
+  technicalSkillLevel     String?  @default("beginner") @map("technical_skill_level") @db.VarChar(20)
+  interests               String[] @default([])
+  
+  // Subscription
+  subscriptionTier        SubscriptionTier @default(free) @map("subscription_tier")
+  subscriptionStatus      String?  @default("inactive") @map("subscription_status") @db.VarChar(20)
+  subscriptionEndsAt      DateTime? @map("subscription_ends_at")
+
+  // Relations
+  contributedIdeas Ideas[]        @relation("IdeaContributor")
+  ideaUnlocks      IdeaUnlocks[]
+  transactions     Transactions[]
+  payouts          Payouts[]
+  likes            IdeaLikes[]
+  bookmarks        IdeaBookmarks[]
+  comments         IdeaComments[]
+  builds           IdeaBuilds[]
+
+  @@map("users")
+  @@index([email])
+  @@index([username])
+  @@index([subscriptionTier])
+}
+
+model Ideas {
+  id                        String   @id @default(uuid())
+  title                     String   @db.VarChar(255)
+  slug                      String   @unique @db.VarChar(255)
+  teaserDescription         String   @map("teaser_description")
+  fullDescription           String   @map("full_description")
+  category                  IdeaCategory
+  tags                      String[] @default([])
+  tier                      IdeaTier
+  source                    IdeaSource
+  contributorId             String?  @map("contributor_id")
+  
+  // Featured/Status
+  isFeatured                Boolean  @default(false) @map("is_featured")
+  isPublished               Boolean  @default(true) @map("is_published")
+  featuredAt                DateTime? @map("featured_at")
+  
+  // Comprehensive data (JSON for flexibility)
+  executiveSummary          Json?    @map("executive_summary")
+  problemStatement          Json?    @map("problem_statement")
+  solutionOverview          Json?    @map("solution_overview")
+  targetMarket              Json?    @map("target_market")
+  competitiveAnalysis       Json?    @map("competitive_analysis")
+  technicalArchitecture     Json?    @map("technical_architecture")
+  goToMarketStrategy        Json?    @map("go_to_market_strategy")
+  financialProjections      Json?    @map("financial_projections")
+  riskAssessment            Json?    @map("risk_assessment")
+  executionPlaybook         Json?    @map("execution_playbook")
+  recommendedServices       Json?    @map("recommended_services")
+  
+  // Scoring
+  marketPotentialScore      Decimal  @map("market_potential_score") @db.Decimal(3, 2)
+  technicalFeasibilityScore Decimal  @map("technical_feasibility_score") @db.Decimal(3, 2)
+  innovationScore           Decimal  @map("innovation_score") @db.Decimal(3, 2)
+  overallScore              Decimal  @map("overall_score") @db.Decimal(3, 2)
+  difficultyLevel           String   @default("intermediate") @map("difficulty_level") @db.VarChar(20)
+  
+  // Engagement metrics
+  viewCount                 Int      @default(0) @map("view_count")
+  likeCount                 Int      @default(0) @map("like_count")
+  commentCount              Int      @default(0) @map("comment_count")
+  bookmarkCount             Int      @default(0) @map("bookmark_count")
+  unlockCount               Int      @default(0) @map("unlock_count")
+  buildCount                Int      @default(0) @map("build_count")
+  
+  // Execution metadata
+  estimatedLaunchTime       Int?     @map("estimated_launch_time") // in days
+  estimatedCost             Decimal? @map("estimated_cost") @db.Decimal(10, 2)
+  
+  // Metadata
+  publishedAt               DateTime @default(now()) @map("published_at")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+  
+  // Premium pricing
+  unlockPrice               Decimal  @default(9.99) @map("unlock_price") @db.Decimal(10, 2)
+
+  // Relations
+  contributor     User?             @relation("IdeaContributor", fields: [contributorId], references: [id])
+  unlocks         IdeaUnlocks[]
+  likes           IdeaLikes[]
+  bookmarks       IdeaBookmarks[]
+  comments        IdeaComments[]
+  builds          IdeaBuilds[]
+
+  @@map("ideas")
+  @@index([tier])
+  @@index([category])
+  @@index([publishedAt(sort: Desc)])
+  @@index([contributorId])
+  @@index([overallScore(sort: Desc)])
+  @@index([isFeatured, featuredAt(sort: Desc)])
+  @@index([likeCount(sort: Desc)])
+  @@index([buildCount(sort: Desc)])
+}
+
+model IdeaUnlocks {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  ideaId                String   @map("idea_id")
+  unlockedAt            DateTime @default(now()) @map("unlocked_at")
+  paymentAmount         Decimal  @map("payment_amount") @db.Decimal(10, 2)
+  stripePaymentIntentId String?  @map("stripe_payment_intent_id") @db.VarChar(255)
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id])
+  idea Ideas @relation(fields: [ideaId], references: [id])
+
+  @@unique([userId, ideaId])
+  @@map("idea_unlocks")
+  @@index([userId])
+  @@index([ideaId])
+}
+
+
+
+model Transactions {
+  id                  String            @id @default(uuid())
+  userId              String            @map("user_id")
+  type                TransactionType
+  amount              Decimal           @db.Decimal(10, 2)
+  description         String?
+  referenceId         String?           @map("reference_id")
+  stripeTransactionId String?           @map("stripe_transaction_id") @db.VarChar(255)
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Payouts {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  amount          Decimal      @db.Decimal(10, 2)
+  status          PayoutStatus
+  stripePayoutId  String?      @map("stripe_payout_id") @db.VarChar(255)
+  requestedAt     DateTime     @default(now()) @map("requested_at")
+  completedAt     DateTime?    @map("completed_at")
+  failureReason   String?      @map("failure_reason")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("payouts")
+  @@index([userId])
+  @@index([status])
+}
+
+// Social Interaction Models
+
+model IdeaLikes {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ideaId    String   @map("idea_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea Ideas @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ideaId])
+  @@map("idea_likes")
+  @@index([ideaId])
+  @@index([userId])
+}
+
+model IdeaBookmarks {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ideaId    String   @map("idea_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea Ideas @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ideaId])
+  @@map("idea_bookmarks")
+  @@index([ideaId])
+  @@index([userId])
+}
+
+model IdeaComments {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ideaId    String   @map("idea_id")
+  content   String
+  parentId  String?  @map("parent_id") // For nested replies
+  
+  isEdited  Boolean  @default(false) @map("is_edited")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea    Ideas          @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  parent  IdeaComments?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies IdeaComments[] @relation("CommentReplies")
+
+  @@map("idea_comments")
+  @@index([ideaId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model IdeaBuilds {
+  id              String      @id @default(uuid())
+  userId          String      @map("user_id")
+  ideaId          String      @map("idea_id")
+  
+  status          BuildStatus @default(planning)
+  title           String?     @db.VarChar(255)
+  description     String?
+  
+  // Progress
+  progressPercent Int         @default(0) @map("progress_percent")
+  
+  // URLs
+  repositoryUrl   String?     @map("repository_url")
+  liveUrl         String?     @map("live_url")
+  
+  // Visibility
+  isPublic        Boolean     @default(true) @map("is_public")
+  
+  // Dates
+  startedAt       DateTime    @default(now()) @map("started_at")
+  launchedAt      DateTime?   @map("launched_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea Ideas @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@map("idea_builds")
+  @@index([ideaId])
+  @@index([userId])
+  @@index([status])
+  @@index([launchedAt(sort: Desc)])
+}
+
+// Enums
+enum IdeaTier {
+  regular
+  premium
+
+  @@map("idea_tier")
+}
+
+enum IdeaSource {
+  ai
+  community
+
+  @@map("idea_source")
+}
+
+enum TransactionType {
+  idea_unlock
+  subscription
+  contributor_earning
+  payout
+
+  @@map("transaction_type")
+}
+
+enum PayoutStatus {
+  pending
+  processing
+  completed
+  failed
+
+  @@map("payout_status")
+}
+
+enum IdeaCategory {
+  saas
+  mobile_app
+  web_app
+  chrome_extension
+  api_service
+  marketplace
+  productivity
+  social
+  ecommerce
+  fintech
+  healthtech
+  edtech
+  devtools
+  ai_ml
+  other
+
+  @@map("idea_category")
+}
+
+enum SubscriptionTier {
+  free
+  pro
+  team
+
+  @@map("subscription_tier")
+}
+
+enum BuildStatus {
+  planning
+  in_progress
+  launched
+  paused
+  abandoned
+
+  @@map("build_status")
+}

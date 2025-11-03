@@ -1,0 +1,50 @@
+{
+  "name": "qbideas",
+  "version": "1.0.0",
+  "description": "AI-powered idea marketplace for the next generation of builders",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "docker-compose up -d",
+    "dev:logs": "docker-compose logs -f",
+    "dev:down": "docker-compose down",
+    "dev:clean": "docker-compose down -v --remove-orphans",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write .",
+    "setup": "npm install && npm run setup --workspaces",
+    "migrate": "docker-compose exec api-service npm run migrate",
+    "seed": "docker-compose exec api-service npm run seed",
+    "seed:ideas": "cd services/api && npx tsx src/scripts/seed-ideas.ts",
+    "db:reset": "docker-compose exec api-service npm run db:reset"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/qbideas.git"
+  },
+  "keywords": [
+    "ai",
+    "ideas",
+    "marketplace",
+    "startup",
+    "innovation"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
