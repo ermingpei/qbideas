@@ -29,7 +29,7 @@ const router = Router();
  *       401:
  *         description: Authentication required
  */
-router.get('/profile', authMiddleware, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.get('/me', authMiddleware as any, async (req: any, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
     select: {
@@ -55,7 +55,7 @@ router.get('/profile', authMiddleware, asyncHandler(async (req: AuthenticatedReq
     success: true,
     data: user,
   });
-}));
+});
 
 /**
  * @swagger
@@ -72,7 +72,7 @@ router.get('/profile', authMiddleware, asyncHandler(async (req: AuthenticatedReq
  *       401:
  *         description: Authentication required
  */
-router.get('/dashboard', authMiddleware, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.get('/dashboard', authMiddleware as any, asyncHandler(async (req: any, res: Response) => {
   const userId = req.user!.id;
 
   // Get user stats

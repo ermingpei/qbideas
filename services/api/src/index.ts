@@ -16,12 +16,20 @@ import { setupSwagger } from './utils/swagger';
 
 // Import routes
 import healthRoutes from './routes/health';
+import authRoutes from './routes/auth';
 import ideaRoutes from './routes/ideas';
 import userRoutes from './routes/users';
 import serviceRoutes from './routes/services';
 import paymentRoutes from './routes/payments';
 import analyticsRoutes from './routes/analytics';
 import marketplaceRoutes from './routes/marketplace';
+import payoutRoutes from './routes/payouts';
+import contributorRoutes from './routes/contributors';
+import interactionRoutes from './routes/interactions';
+
+// Import jobs
+import { startSubmissionProcessor } from './jobs/processIdeaSubmission';
+import { startTrendingScoreUpdater } from './jobs/updateTrendingScores';
 
 // Load environment variables
 dotenv.config();
@@ -36,7 +44,7 @@ export const prisma = new PrismaClient({
 });
 
 export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  retryDelayOnFailover: 100,
+  retryStrategy: (times) => Math.min(times * 50, 2000),
   maxRetriesPerRequest: 3,
   lazyConnect: true,
 });
@@ -90,12 +98,16 @@ if (process.env.NODE_ENV === 'development' || process.env.ENABLE_SWAGGER === 'tr
 
 // Routes
 app.use('/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/ideas', ideaRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/analytics', authMiddleware, analyticsRoutes);
+app.use('/api/analytics', authMiddleware as any, analyticsRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/payouts', payoutRoutes);
+app.use('/api/contributors', contributorRoutes);
+app.use('/api/interactions', interactionRoutes);
 
 // Error handling
 app.use(notFoundHandler);
@@ -104,7 +116,7 @@ app.use(errorHandler);
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
-  
+
   try {
     await prisma.$disconnect();
     redis.disconnect();
@@ -134,6 +146,11 @@ const startServer = async () => {
       logger.info(`🚀 API Server running on port ${PORT}`);
       logger.info(`📚 API Documentation: http://localhost:${PORT}/docs`);
       logger.info(`🏥 Health Check: http://localhost:${PORT}/health`);
+
+      // Start background jobs
+      startSubmissionProcessor();
+      startTrendingScoreUpdater();
+      logger.info('✅ Background jobs started');
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

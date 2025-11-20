@@ -46,6 +46,26 @@ qbideas is a **marketplace for discovering and building startup ideas**. Browse 
 
 See [SETUP.md](SETUP.md) for detailed instructions.
 
+## 🔄 Migration to New Mac
+
+Moving to a new Mac? We've got you covered!
+
+- **Quick Start**: [MIGRATION_QUICK_START.md](MIGRATION_QUICK_START.md) - Fast migration in 3 methods
+- **Complete Guide**: [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Detailed instructions with all options
+- **Checklist**: [MIGRATION_CHECKLIST.md](MIGRATION_CHECKLIST.md) - Step-by-step verification
+- **Scripts**: [scripts/README.md](scripts/README.md) - Automated migration tools
+
+**Fastest method** (same subnet):
+```bash
+# On old Mac
+./scripts/transfer-to-new-mac.sh
+
+# On new Mac
+curl -O http://OLD_MAC_IP:8080/qbideas-migration.tar.gz
+tar xzf qbideas-migration.tar.gz && cd qbideas-migration
+./setup-on-new-mac.sh
+```
+
 ## 🏗️ Architecture
 
 ### Services

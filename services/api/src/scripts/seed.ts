@@ -197,11 +197,14 @@ async function main() {
       .replace(/[^a-z0-9 -]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .trim('-');
+      .replace(/^-+|-+$/g, '');
 
     const idea = await prisma.ideas.create({
       data: {
         ...ideaData,
+        category: ideaData.category as any, // Cast to match Prisma enum
+        tier: ideaData.tier as any,
+        source: ideaData.source as any,
         slug,
         viewCount: Math.floor(Math.random() * 1000) + 100,
         likeCount: Math.floor(Math.random() * 50) + 10,

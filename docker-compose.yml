@@ -91,7 +91,9 @@ services:
       CORS_ORIGIN: http://localhost:3002
     volumes:
       - ./services/api:/app
+      - ./services/shared:/shared
       - /app/node_modules
+      - /shared/node_modules
     depends_on:
       postgres:
         condition: service_healthy

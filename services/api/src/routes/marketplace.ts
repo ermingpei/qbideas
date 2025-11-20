@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { body, param, query } from 'express-validator';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -14,17 +14,17 @@ const router = Router();
  */
 router.get(
   '/ideas',
-  optionalAuthMiddleware,
+  optionalAuthMiddleware as any,
   [
-    query('category').optional().isString(),
-    query('difficulty').optional().isIn(['beginner', 'intermediate', 'advanced']),
-    query('sort').optional().isIn(['trending', 'newest', 'popular', 'top_rated']),
-    query('search').optional().isString(),
-    query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 50 }),
+    query('category').optional({ values: 'falsy' }).isString(),
+    query('difficulty').optional({ values: 'falsy' }).isIn(['beginner', 'intermediate', 'advanced']),
+    query('sort').optional({ values: 'falsy' }).isIn(['trending', 'newest', 'popular', 'top_rated']),
+    query('search').optional({ values: 'falsy' }).isString(),
+    query('page').optional({ values: 'falsy' }).isInt({ min: 1 }),
+    query('limit').optional({ values: 'falsy' }).isInt({ min: 1, max: 50 }),
   ],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const {
         category,
@@ -203,7 +203,7 @@ router.get('/ideas/featured', async (req, res) => {
       error: {
         code: 'MKT_002',
         message: 'Failed to fetch featured ideas',
-        },
+      },
     });
   }
 });
@@ -215,10 +215,10 @@ router.get('/ideas/featured', async (req, res) => {
  */
 router.get(
   '/ideas/:slug',
-  optionalAuthMiddleware,
+  optionalAuthMiddleware as any,
   [param('slug').isString().notEmpty()],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const { slug } = req.params;
 
@@ -255,7 +255,7 @@ router.get(
       // Check if user has unlocked this idea
       let isUnlocked = false;
       let hasProSubscription = false;
-      
+
       if (req.user) {
         const [unlock, user] = await Promise.all([
           prisma.ideaUnlocks.findUnique({
@@ -322,13 +322,13 @@ router.get(
         response.recommendedServices = idea.recommendedServices;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: response,
       });
     } catch (error) {
       logger.error('Error fetching idea details:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           code: 'MKT_004',
@@ -346,10 +346,10 @@ router.get(
  */
 router.post(
   '/ideas/:ideaId/like',
-  authMiddleware,
+  authMiddleware as any,
   [param('ideaId').isUUID()],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const { ideaId } = req.params;
       const userId = req.user.id;
@@ -413,10 +413,10 @@ router.post(
  */
 router.post(
   '/ideas/:ideaId/bookmark',
-  authMiddleware,
+  authMiddleware as any,
   [param('ideaId').isUUID()],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const { ideaId } = req.params;
       const userId = req.user.id;
@@ -480,17 +480,17 @@ router.post(
  */
 router.post(
   '/ideas/:ideaId/build',
-  authMiddleware,
+  authMiddleware as any,
   [
     param('ideaId').isUUID(),
     body('title').optional().isString(),
     body('description').optional().isString(),
   ],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const { ideaId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const { title, description } = req.body;
 
       // Check if already building
@@ -527,13 +527,13 @@ router.post(
         return newBuild;
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: build,
       });
     } catch (error) {
       logger.error('Error creating build:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           code: 'MKT_008',
@@ -553,7 +553,7 @@ router.get(
   '/ideas/:ideaId/builds',
   [param('ideaId').isUUID()],
   validate,
-  async (req, res) => {
+  async (req: any, res: Response) => {
     try {
       const { ideaId } = req.params;
 

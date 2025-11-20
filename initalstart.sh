@@ -1,4 +1,4 @@
-### Quick Start
+### Initial Start
 # 1. Start backend
 npm run dev
 npm run migrate

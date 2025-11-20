@@ -83,6 +83,12 @@ model Ideas {
   executionPlaybook         Json?    @map("execution_playbook")
   recommendedServices       Json?    @map("recommended_services")
   
+  // Community submission fields
+  submissionStatus          String?  @default("approved") @map("submission_status") @db.VarChar(20)
+  rejectionFeedback         Json?    @map("rejection_feedback")
+  trendingScore             Decimal? @default(0) @map("trending_score") @db.Decimal(10, 2)
+  trendingScoreUpdatedAt    DateTime? @map("trending_score_updated_at")
+  
   // Scoring
   marketPotentialScore      Decimal  @map("market_potential_score") @db.Decimal(3, 2)
   technicalFeasibilityScore Decimal  @map("technical_feasibility_score") @db.Decimal(3, 2)
@@ -127,6 +133,9 @@ model Ideas {
   @@index([isFeatured, featuredAt(sort: Desc)])
   @@index([likeCount(sort: Desc)])
   @@index([buildCount(sort: Desc)])
+  @@index([submissionStatus])
+  @@index([trendingScore(sort: Desc)])
+  @@index([source, isPublished, publishedAt(sort: Desc)])
 }
 
 model IdeaUnlocks {
@@ -349,4 +358,17 @@ enum BuildStatus {
   abandoned
 
   @@map("build_status")
+}
+
+model PremiumServices {
+  id               String   @id @default(uuid())
+  name             String   @db.VarChar(255)
+  description      String
+  price            Decimal  @db.Decimal(10, 2)
+  deliveryTimeDays Int      @map("delivery_time_days")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("premium_services")
 }

@@ -11,7 +11,16 @@ export const ErrorCodes = {
   VALIDATION_ERROR: 'VAL_001',
   NOT_FOUND: 'NOT_FOUND',
   INTERNAL_ERROR: 'INT_001',
+  DATABASE_ERROR: 'DB_001',
 };
+
+interface ApiError {
+  code: string;
+  message: string;
+  details?: any;
+  timestamp: string;
+  requestId?: string;
+}
 
 export class AppError extends Error {
   public statusCode: number;
@@ -51,7 +60,7 @@ export const errorHandler = (
     // Custom application errors
     statusCode = error.statusCode;
     apiError = {
-      code: error.code as ErrorCodes,
+      code: error.code as string,
       message: error.message,
       timestamp: new Date().toISOString(),
       requestId: req.headers['x-request-id'] as string,
@@ -107,8 +116,8 @@ export const errorHandler = (
     // Generic server errors
     apiError = {
       code: ErrorCodes.INTERNAL_ERROR,
-      message: process.env.NODE_ENV === 'production' 
-        ? 'Internal server error' 
+      message: process.env.NODE_ENV === 'production'
+        ? 'Internal server error'
         : error.message,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       timestamp: new Date().toISOString(),

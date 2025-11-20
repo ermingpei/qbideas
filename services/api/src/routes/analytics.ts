@@ -19,7 +19,7 @@ const router = Router();
  *       403:
  *         description: Admin access required
  */
-router.get('/overview', adminMiddleware, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+router.get('/dashboard', async (req: any, res: Response) => {
   // TODO: Implement analytics
   res.json({
     success: true,
@@ -27,6 +27,6 @@ router.get('/overview', adminMiddleware, asyncHandler(async (req: AuthenticatedR
       message: 'Analytics coming soon',
     },
   });
-}));
+});
 
 export default router;

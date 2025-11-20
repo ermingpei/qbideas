@@ -132,6 +132,7 @@ async function generateIdeaData(idea: typeof sampleIdeas[0]) {
     tags: idea.tags,
     tier: idea.tier,
     source: 'ai',
+    submissionStatus: 'approved',
     isFeatured: Math.random() > 0.7,
     difficultyLevel: idea.difficulty,
     marketPotentialScore: idea.scores.market,
@@ -247,24 +248,23 @@ async function seedIdeas() {
 
   for (const ideaData of sampleIdeas) {
     const data = await generateIdeaData(ideaData);
-    
-    await prisma.ideas.upsert({
+    const idea = await prisma.ideas.upsert({
       where: { slug: data.slug },
-      update: data,
-      create: data,
+      update: data as any,
+      create: data as any,
     });
-    
+
     console.log(`✓ ${data.title}`);
   }
 
   console.log(`\n${sampleIdeas.length} ideas seeded successfully!`);
-  
+
   // Print stats
   const stats = await prisma.ideas.groupBy({
     by: ['category'],
     _count: true,
   });
-  
+
   console.log('\nIdeas by category:');
   stats.forEach(stat => {
     console.log(`  ${stat.category}: ${stat._count}`);

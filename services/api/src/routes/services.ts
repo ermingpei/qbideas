@@ -17,8 +17,8 @@ const router = Router();
  *       200:
  *         description: List of premium services
  */
-router.get('/', optionalAuthMiddleware, asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const services = await prisma.premiumServices.findMany({
+router.get('/', optionalAuthMiddleware as any, asyncHandler(async (req: any, res: Response) => {
+  const services = await (prisma as any).premiumServices.findMany({
     where: { isActive: true },
     orderBy: { price: 'asc' },
   });
