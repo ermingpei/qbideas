@@ -32,20 +32,34 @@ model User {
   technicalSkillLevel     String?  @default("beginner") @map("technical_skill_level") @db.VarChar(20)
   interests               String[] @default([])
   
+  // Collaboration fields
+  roles                   String[] @default(["idea_owner"])
+  lookingFor              String[] @default([]) @map("looking_for")
+  hourlyRate              Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  availabilityStatus      String?  @default("available") @map("availability_status") @db.VarChar(20)
+  skills                  String[] @default([])
+  portfolioUrl            String?  @map("portfolio_url")
+  
   // Subscription
   subscriptionTier        SubscriptionTier @default(free) @map("subscription_tier")
   subscriptionStatus      String?  @default("inactive") @map("subscription_status") @db.VarChar(20)
   subscriptionEndsAt      DateTime? @map("subscription_ends_at")
 
   // Relations
-  contributedIdeas Ideas[]        @relation("IdeaContributor")
-  ideaUnlocks      IdeaUnlocks[]
-  transactions     Transactions[]
-  payouts          Payouts[]
-  likes            IdeaLikes[]
-  bookmarks        IdeaBookmarks[]
-  comments         IdeaComments[]
-  builds           IdeaBuilds[]
+  contributedIdeas  Ideas[]            @relation("IdeaContributor")
+  ideaUnlocks       IdeaUnlocks[]
+  transactions      Transactions[]
+  payouts           Payouts[]
+  likes             IdeaLikes[]
+  bookmarks         IdeaBookmarks[]
+  comments          IdeaComments[]
+  builds            IdeaBuilds[]
+  teamRequests      TeamRequest[]      @relation("TeamRequestOwner")
+  teamApplications  TeamApplication[]  @relation("TeamApplicationApplicant")
+  ownedProjects     Project[]          @relation("ProjectOwner")
+  projectMemberships ProjectMember[]
+  assignedTasks     ProjectTask[]      @relation("TaskAssignee")
+  uploadedFiles     ProjectFile[]      @relation("FileUploader")
 
   @@map("users")
   @@index([email])
@@ -123,6 +137,8 @@ model Ideas {
   bookmarks       IdeaBookmarks[]
   comments        IdeaComments[]
   builds          IdeaBuilds[]
+  teamRequests    TeamRequest[]
+  projects        Project[]
 
   @@map("ideas")
   @@index([tier])
@@ -232,7 +248,8 @@ model IdeaBookmarks {
 model IdeaComments {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  ideaId    String   @map("idea_id")
+  ideaId    String?  @map("idea_id")
+  projectId String?  @map("project_id")
   content   String
   parentId  String?  @map("parent_id") // For nested replies
   
@@ -242,12 +259,14 @@ model IdeaComments {
 
   // Relations
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idea    Ideas          @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  idea    Ideas?         @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  project Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parent  IdeaComments?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies IdeaComments[] @relation("CommentReplies")
 
   @@map("idea_comments")
   @@index([ideaId])
+  @@index([projectId])
   @@index([userId])
   @@index([parentId])
   @@index([createdAt(sort: Desc)])
@@ -371,4 +390,127 @@ model PremiumServices {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@map("premium_services")
+}
+
+// Collaboration Platform Models
+
+model TeamRequest {
+  id           String   @id @default(uuid())
+  ideaId       String   @map("idea_id")
+  userId       String   @map("user_id")
+  rolesNeeded  String[] @map("roles_needed")
+  budgetRange  String?  @map("budget_range")
+  timeline     String?
+  description  String?
+  status       String   @default("open")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  idea         Ideas              @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user         User               @relation("TeamRequestOwner", fields: [userId], references: [id], onDelete: Cascade)
+  applications TeamApplication[]
+
+  @@map("team_requests")
+  @@index([ideaId])
+  @@index([userId])
+  @@index([status])
+}
+
+model TeamApplication {
+  id            String   @id @default(uuid())
+  teamRequestId String   @map("team_request_id")
+  applicantId   String   @map("applicant_id")
+  message       String?
+  proposedRate  Decimal? @map("proposed_rate") @db.Decimal(10, 2)
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  teamRequest TeamRequest @relation(fields: [teamRequestId], references: [id], onDelete: Cascade)
+  applicant   User        @relation("TeamApplicationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@map("team_applications")
+  @@index([teamRequestId])
+  @@index([applicantId])
+  @@index([status])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  ideaId      String?  @map("idea_id")
+  ownerId     String   @map("owner_id")
+  name        String
+  description String?
+  status      String   @default("planning")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  idea    Ideas?          @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members ProjectMember[]
+  tasks   ProjectTask[]
+  files   ProjectFile[]
+  comments IdeaComments[]
+
+  @@map("projects")
+  @@index([ideaId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model ProjectMember {
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  role      String
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+  @@index([userId])
+}
+
+model ProjectTask {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  title       String
+  description String?
+  assignedTo  String?   @map("assigned_to")
+  status      String    @default("todo")
+  dueDate     DateTime? @map("due_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee User?   @relation("TaskAssignee", fields: [assignedTo], references: [id])
+
+  @@map("project_tasks")
+  @@index([projectId])
+  @@index([assignedTo])
+  @@index([status])
+}
+
+model ProjectFile {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  uploadedBy String   @map("uploaded_by")
+  fileName   String   @map("file_name")
+  fileUrl    String   @map("file_url")
+  fileSize   Int?     @map("file_size")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader User    @relation("FileUploader", fields: [uploadedBy], references: [id])
+
+  @@map("project_files")
+  @@index([projectId])
+  @@index([uploadedBy])
 }

@@ -26,10 +26,15 @@ import marketplaceRoutes from './routes/marketplace';
 import payoutRoutes from './routes/payouts';
 import contributorRoutes from './routes/contributors';
 import interactionRoutes from './routes/interactions';
+import teamRequestRoutes from './routes/team-requests';
+import teamApplicationRoutes from './routes/team-applications';
+import projectRoutes from './routes/projects';
 
 // Import jobs
 import { startSubmissionProcessor } from './jobs/processIdeaSubmission';
 import { startTrendingScoreUpdater } from './jobs/updateTrendingScores';
+import { startMatchingDigestJob } from './jobs/matching-digest';
+import { initStorage } from './lib/storage';
 
 // Load environment variables
 dotenv.config();
@@ -108,6 +113,9 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/payouts', payoutRoutes);
 app.use('/api/contributors', contributorRoutes);
 app.use('/api/interactions', interactionRoutes);
+app.use('/api/team-requests', teamRequestRoutes);
+app.use('/api/team-applications', teamApplicationRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Error handling
 app.use(notFoundHandler);
@@ -142,14 +150,16 @@ const startServer = async () => {
     await redis.ping();
     logger.info('Redis connected successfully');
 
-    app.listen(PORT, () => {
+    app.listen(PORT, async () => { // Changed to async to await initStorage
       logger.info(`🚀 API Server running on port ${PORT}`);
+      await initStorage(); // Added this line
       logger.info(`📚 API Documentation: http://localhost:${PORT}/docs`);
       logger.info(`🏥 Health Check: http://localhost:${PORT}/health`);
 
       // Start background jobs
       startSubmissionProcessor();
       startTrendingScoreUpdater();
+      startMatchingDigestJob();
       logger.info('✅ Background jobs started');
     });
   } catch (error) {

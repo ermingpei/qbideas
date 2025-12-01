@@ -358,8 +358,8 @@ router.delete('/comments/:commentId', authMiddleware as any, asyncHandler(async 
     where: { id: commentId },
   });
 
-  // Decrement count if top-level
-  if (!comment.parentId) {
+  // Decrement count if top-level and linked to an idea
+  if (!comment.parentId && comment.ideaId) {
     await prisma.ideas.update({
       where: { id: comment.ideaId },
       data: { commentCount: { decrement: 1 } },
